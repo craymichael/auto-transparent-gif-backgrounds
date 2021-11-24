@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import os
 
-DEBUG = True
+DEBUG = False
 
 
 def run(path_gif_in, path_gif_out=None):
     import cv2
-    import imageio
     import numpy as np
     import scipy.stats
 
@@ -18,6 +17,7 @@ def run(path_gif_in, path_gif_out=None):
     frames = []
     # open GIF
     cap = cv2.VideoCapture(path_gif_in)
+    fps = cap.get(cv2.CAP_PROP_FPS)
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -37,9 +37,8 @@ def run(path_gif_in, path_gif_out=None):
     new_value = ([0, 0, 255, 255] if DEBUG else [0, 0, 0, 0])
     flags = 4 | (255 << 8) | cv2.FLOODFILL_MASK_ONLY
     diff = [20] * 3
-    if False:
-        flags |= cv2.FLOODFILL_FIXED_RANGE
     # flood filling time for each frame
+    frames_out = []
     for frame in frames:
         where_h, where_w = where_border_equals_color(
             frame, background_color, border_pixels)
@@ -65,6 +64,42 @@ def run(path_gif_in, path_gif_out=None):
                 flags=flags,
             )
         frame_alpha[mask[1:-1, 1:-1] == 255] = new_value
+        frames_out.append(frame_alpha)
+    # write out GIF
+    save_gif(frames_out, fps, path_gif_out)
+
+
+def save_gif(frames, fps, path_gif_out):
+    import subprocess
+    import tempfile
+    import math
+    import os
+    import cv2
+    import shutil
+
+    # convert to centiseconds
+    delay = 100 / fps
+
+    # save frames to temporary directory
+    dirname = tempfile.mkdtemp()
+    n_digits = math.ceil(math.log10(len(frames) + 1))
+    for i, frame in enumerate(frames):
+        cv2.imwrite(os.path.join(dirname, f'FRAME_{i:0{n_digits}d}.png'),
+                    frame)
+
+    try:
+        # ImageMagick time
+        subprocess.run(
+            ['convert',
+             '-delay', str(delay),
+             '-loop', '0',
+             '-alpha', 'set',
+             '-dispose', 'previous',
+             os.path.join(dirname, 'FRAME_*.png'),
+             path_gif_out]
+        )
+    finally:
+        shutil.rmtree(dirname)
 
 
 def border_size_heuristic(frames):
