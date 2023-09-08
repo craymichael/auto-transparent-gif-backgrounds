@@ -4,7 +4,7 @@ import os
 DEBUG = False
 
 
-def run(path_gif_in, path_gif_out=None):
+def run(path_gif_in, path_gif_out=None, threshold=5):
     import cv2
     import numpy as np
     import scipy.stats
@@ -36,7 +36,8 @@ def run(path_gif_in, path_gif_out=None):
     N, H, W, C = frames.shape  # noqa
     new_value = ([0, 0, 255, 255] if DEBUG else [0, 0, 0, 0])
     flags = 4 | (255 << 8) | cv2.FLOODFILL_MASK_ONLY
-    diff = [20] * 3
+    # diff = [20] * 3
+    diff = [threshold] * 3
     # flood filling time for each frame
     frames_out = []
     for frame in frames:
@@ -170,6 +171,11 @@ def main():
         help='Path to the output GIF (default: '
              '<input-basename>-transparent.gif)'
     )
+    parser.add_argument(
+        '--threshold', '-t', type=int, default=5,
+        help=('The threshold for all RGB channels to determine which pixels '
+              'belong to the background')
+    )
     args = parser.parse_args()
     input_filename = args.input_filename
     output_filename = args.output_filename
@@ -180,6 +186,7 @@ def main():
     run(
         path_gif_in=input_filename,
         path_gif_out=output_filename,
+        threshold=args.threshold,
     )
 
 
