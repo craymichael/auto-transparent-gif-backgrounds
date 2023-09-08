@@ -12,6 +12,8 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
+  --threshold THRESHOLD, -t THRESHOLD
+                        The threshold for all RGB channels to determine which pixels belong to the background
 ```
 
 # Installation
